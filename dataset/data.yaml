@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 4
+names: ['Bus', 'Car', 'Motorcycle', 'Person']
+
+roboflow:
+  workspace: yolo-with-custom-dataset
+  project: objectdetectionyolov10x
+  version: 1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/yolo-with-custom-dataset/objectdetectionyolov10x/dataset/1
