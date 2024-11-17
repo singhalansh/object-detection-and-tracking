@@ -116,6 +116,12 @@ if uploaded_video:
 
     # Step 3: Display Results
     st.subheader("Output Video")
+    # After video generation, add this to check if the file exists
+    if os.path.exists(output_video_path):
+        st.write("Video file successfully created!")
+    else:
+        st.write("Video file not found at:", output_video_path)
+
     with open(output_video_path, "rb") as f:
         st.video(f)
 
