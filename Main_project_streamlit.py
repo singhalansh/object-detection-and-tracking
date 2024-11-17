@@ -37,7 +37,7 @@ if uploaded_video:
 
         # Output video writer
         output_video_path = os.path.join(tempfile.gettempdir(), "output_video.mp4")
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Changed codec to 'mp4v'
+        fourcc = cv2.VideoWriter_fourcc(*'H264')  # Changed codec to 'mp4v'
         out = cv2.VideoWriter(output_video_path, fourcc, fps, (frame_width, frame_height))
 
         # Tracking data
