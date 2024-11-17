@@ -1,7 +1,6 @@
 import streamlit as st
 import cv2
 import json
-import pandas as pd
 import matplotlib.pyplot as plt
 from ultralytics import YOLO
 import tempfile
@@ -20,7 +19,7 @@ if uploaded_video:
     # Step 2: Process the Video
     def process_video(input_path):
         # Initialize YOLO model
-        model = YOLO('yolov10m.pt')
+        model = YOLO('yolov10m.pt')  # Ensure the correct model file path
         class_list = model.names
 
         # Open video file
@@ -37,14 +36,13 @@ if uploaded_video:
 
         # Output video writer
         output_video_path = os.path.join(tempfile.gettempdir(), "output_video.mp4")
-        fourcc = cv2.VideoWriter_fourcc(*'H264')  # Changed codec to 'mp4v'
+        fourcc = cv2.VideoWriter_fourcc(*'H264')  # Ensure compatible codec
         out = cv2.VideoWriter(output_video_path, fourcc, fps, (frame_width, frame_height))
 
         # Tracking data
         tracking_timestamps = {}
         disappearance_counts = {}
         debounce_limit = 10
-        frame_buffer = {}
         tracking_data_json = []
 
         frame_number = 0
@@ -55,7 +53,7 @@ if uploaded_video:
                 break
 
             frame_number += 1
-            timestamp = frame_number / fps
+            timestamp = frame_number / fps  # Calculate timestamp
 
             # YOLO Inference
             results = model.predict(frame)
@@ -76,11 +74,23 @@ if uploaded_video:
                                 "last_time": timestamp
                             }
                             disappearance_counts[object_id] = 0
+                            # Add object immediately to JSON
+                            tracking_data_json.append({
+                                "name": label,
+                                "trackId": object_id,
+                                "startTime": f"{timestamp:.2f}s",
+                                "endTime": f"{timestamp:.2f}s"
+                            })
                         else:
                             tracking_timestamps[object_id]["last_time"] = timestamp
                             disappearance_counts[object_id] = 0
 
-                        frame_buffer[object_id] = (int(x1), int(y1), int(x2), int(y2))
+                            # Update JSON entry for existing object
+                            for obj in tracking_data_json:
+                                if obj["trackId"] == object_id:
+                                    obj["endTime"] = f"{timestamp:.2f}s"
+
+                        # Draw bounding box and label
                         cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
                         cv2.putText(frame, label, (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
@@ -89,26 +99,20 @@ if uploaded_video:
                 if obj_id not in detected_ids:
                     disappearance_counts[obj_id] += 1
                     if disappearance_counts[obj_id] > debounce_limit:
-                        tracking_data_json.append({
-                            "name": tracking_timestamps[obj_id]["class"],
-                            "trackId": obj_id,
-                            "startTime": f"{tracking_timestamps[obj_id]['start_time']:.2f}s",
-                            "endTime": f"{tracking_timestamps[obj_id]['last_time']:.2f}s"
-                        })
-                        del tracking_timestamps[obj_id]
-                        del disappearance_counts[obj_id]
-                        del frame_buffer[obj_id]
+                        # Finalize object tracking
+                        tracking_timestamps.pop(obj_id, None)
+                        disappearance_counts.pop(obj_id, None)
 
             out.write(frame)
-
-        # Release resources
-        cap.release()
-        out.release()
 
         # Save JSON
         json_path = os.path.join(tempfile.gettempdir(), "tracking_data_output.json")
         with open(json_path, "w") as f:
             json.dump(tracking_data_json, f, indent=4)
+
+        # Release resources
+        cap.release()
+        out.release()
 
         return output_video_path, json_path
 
@@ -116,7 +120,6 @@ if uploaded_video:
 
     # Step 3: Display Results
     st.subheader("Output Video")
-    # Check if the video file exists
     if os.path.exists(output_video_path):
         st.write("Video file successfully created!")
         with open(output_video_path, "rb") as f:
@@ -129,13 +132,13 @@ if uploaded_video:
         tracking_data = json.load(f)
 
     # Generate Timeline Graph
-    unique_objects = list(set([item["name"] for item in tracking_data]))
+    unique_objects = sorted(set([item["name"] for item in tracking_data]))
     object_intervals = []
     object_names = []
 
     for obj in tracking_data:
-        start_time = float(obj["startTime"][:-1])
-        end_time = float(obj["endTime"][:-1])
+        start_time = float(obj["startTime"][:-1])  # Strip "s" and convert to float
+        end_time = float(obj["endTime"][:-1])  # Strip "s" and convert to float
         object_intervals.append((start_time, end_time))
         object_names.append(obj["name"])
 
