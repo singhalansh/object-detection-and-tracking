@@ -37,7 +37,7 @@ if uploaded_video:
 
         # Output video writer
         output_video_path = os.path.join(tempfile.gettempdir(), "output_video.mp4")
-        fourcc = cv2.VideoWriter_fourcc(*'H264')
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Changed codec to 'mp4v'
         out = cv2.VideoWriter(output_video_path, fourcc, fps, (frame_width, frame_height))
 
         # Tracking data
@@ -116,14 +116,13 @@ if uploaded_video:
 
     # Step 3: Display Results
     st.subheader("Output Video")
-    # After video generation, add this to check if the file exists
+    # Check if the video file exists
     if os.path.exists(output_video_path):
         st.write("Video file successfully created!")
+        with open(output_video_path, "rb") as f:
+            st.video(f)
     else:
         st.write("Video file not found at:", output_video_path)
-
-    with open(output_video_path, "rb") as f:
-        st.video(f)
 
     st.subheader("Timeline Graph")
     with open(json_file_path, "r") as f:
