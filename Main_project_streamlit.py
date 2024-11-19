@@ -35,7 +35,7 @@ if uploaded_video:
         st.write(f"Video Properties: {frame_width}x{frame_height}, {fps} FPS, {total_frames} frames")
 
         # Output video writer
-        output_video_path = os.path.join(tempfile.gettempdir(), "output_video.mp4")
+        output_video_path = os.path.join(os.getcwd(), "output_video.mp4")
         fourcc = cv2.VideoWriter_fourcc(*'H264')  # Compatible codec
         out = cv2.VideoWriter(output_video_path, fourcc, fps, (frame_width, frame_height))
 
@@ -117,7 +117,7 @@ if uploaded_video:
             })
 
         # Save JSON
-        json_path = os.path.join(tempfile.gettempdir(), "tracking_data_output.json")
+        json_path = os.path.join(os.getcwd(), "tracking_data_output.json")
         with open(json_path, "w") as f:
             json.dump(tracking_data_json, f, indent=4)
 
