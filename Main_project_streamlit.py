@@ -36,10 +36,10 @@ if uploaded_video:
 
         # Output video writer
         output_video_path = os.path.join(tempfile.gettempdir(), "output_video.mp4")
-        fourcc = cv2.VideoWriter_fourcc(*'H264')  # Ensure compatible codec
+        fourcc = cv2.VideoWriter_fourcc(*'H264')  # Compatible codec
         out = cv2.VideoWriter(output_video_path, fourcc, fps, (frame_width, frame_height))
 
-        # Tracking data
+        # Tracking data structures
         tracking_timestamps = {}
         disappearance_counts = {}
         debounce_limit = 10
@@ -53,12 +53,13 @@ if uploaded_video:
                 break
 
             frame_number += 1
-            timestamp = frame_number / fps  # Calculate timestamp
+            timestamp = frame_number / fps
 
             # YOLO Inference
             results = model.predict(frame)
             detected_ids = []
 
+            # Process detected objects
             if results and results[0].boxes is not None:
                 for box in results[0].boxes.data.cpu().numpy():
                     x1, y1, x2, y2, conf, cls = box
@@ -70,40 +71,50 @@ if uploaded_video:
                         if object_id not in tracking_timestamps:
                             tracking_timestamps[object_id] = {
                                 "class": label,
-                                "start_time": timestamp,
-                                "last_time": timestamp
+                                "trackId": object_id,
+                                "startTime": timestamp,
+                                "lastSeenTime": timestamp,
+                                "detectedFrames": 1
                             }
                             disappearance_counts[object_id] = 0
-                            # Add object immediately to JSON
-                            tracking_data_json.append({
-                                "name": label,
-                                "trackId": object_id,
-                                "startTime": f"{timestamp:.2f}s",
-                                "endTime": f"{timestamp:.2f}s"
-                            })
                         else:
-                            tracking_timestamps[object_id]["last_time"] = timestamp
+                            tracking_timestamps[object_id]["lastSeenTime"] = timestamp
+                            tracking_timestamps[object_id]["detectedFrames"] += 1
                             disappearance_counts[object_id] = 0
-
-                            # Update JSON entry for existing object
-                            for obj in tracking_data_json:
-                                if obj["trackId"] == object_id:
-                                    obj["endTime"] = f"{timestamp:.2f}s"
 
                         # Draw bounding box and label
                         cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
                         cv2.putText(frame, label, (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-            # Handle undetected objects
+            # Handle objects not detected in the current frame
             for obj_id in list(tracking_timestamps.keys()):
                 if obj_id not in detected_ids:
                     disappearance_counts[obj_id] += 1
                     if disappearance_counts[obj_id] > debounce_limit:
-                        # Finalize object tracking
-                        tracking_timestamps.pop(obj_id, None)
-                        disappearance_counts.pop(obj_id, None)
+                        # Finalize tracking data when object disappears
+                        tracking_data_json.append({
+                            "name": tracking_timestamps[obj_id]["class"],
+                            "trackId": tracking_timestamps[obj_id]["trackId"],
+                            "startTime": f"{tracking_timestamps[obj_id]['startTime']:.2f}s",
+                            "endTime": f"{tracking_timestamps[obj_id]['lastSeenTime']:.2f}s",
+                            "duration": f"{(tracking_timestamps[obj_id]['lastSeenTime'] - tracking_timestamps[obj_id]['startTime']):.2f}s",
+                            "totalFramesDetected": tracking_timestamps[obj_id]["detectedFrames"]
+                        })
+                        del tracking_timestamps[obj_id]
+                        del disappearance_counts[obj_id]
 
             out.write(frame)
+
+        # Finalize tracking data for remaining objects
+        for obj_id in tracking_timestamps:
+            tracking_data_json.append({
+                "name": tracking_timestamps[obj_id]["class"],
+                "trackId": tracking_timestamps[obj_id]["trackId"],
+                "startTime": f"{tracking_timestamps[obj_id]['startTime']:.2f}s",
+                "endTime": f"{tracking_timestamps[obj_id]['lastSeenTime']:.2f}s",
+                "duration": f"{(tracking_timestamps[obj_id]['lastSeenTime'] - tracking_timestamps[obj_id]['startTime']):.2f}s",
+                "totalFramesDetected": tracking_timestamps[obj_id]["detectedFrames"]
+            })
 
         # Save JSON
         json_path = os.path.join(tempfile.gettempdir(), "tracking_data_output.json")
@@ -137,8 +148,8 @@ if uploaded_video:
     object_names = []
 
     for obj in tracking_data:
-        start_time = float(obj["startTime"][:-1])  # Strip "s" and convert to float
-        end_time = float(obj["endTime"][:-1])  # Strip "s" and convert to float
+        start_time = float(obj["startTime"][:-1])
+        end_time = float(obj["endTime"][:-1])
         object_intervals.append((start_time, end_time))
         object_names.append(obj["name"])
 
