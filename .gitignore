@@ -1,0 +1,13 @@
+# Ignore model files
+*.pt
+*.pth
+
+# Ignore video files
+*.mp4
+
+# Ignore JSON files
+*.json
+
+# Ignore Caffe model files
+*.prototxt
+*.caffemodel
