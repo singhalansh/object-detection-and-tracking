@@ -83,7 +83,7 @@ if uploaded_video:
             tracking_data_json = []
 
             frame_number = 0
-            confidence_threshold = 0.5
+            confidence_threshold = 0.7
 
             # Progress bar
             progress_bar = st.progress(0)
