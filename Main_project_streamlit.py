@@ -19,7 +19,7 @@ if uploaded_video:
     # Step 2: Process the Video
     def process_video(input_path):
         # Initialize YOLO model
-        model = YOLO('yolov10m.pt')  # Ensure the correct model file path
+        model = YOLO('yolo11l.pt')  # Ensure the correct model file path
         class_list = model.names
 
         # Open video file
@@ -63,7 +63,7 @@ if uploaded_video:
             if results and results[0].boxes is not None:
                 for box in results[0].boxes.data.cpu().numpy():
                     x1, y1, x2, y2, conf, cls = box
-                    if conf > 0.5 and int(cls) < len(class_list):
+                    if conf > 0.7 and int(cls) < len(class_list):
                         label = class_list[int(cls)]
                         object_id = int(cls)
 
@@ -84,22 +84,23 @@ if uploaded_video:
 
                         # Draw bounding box and label
                         cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
-                        cv2.putText(frame, label, (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                        cv2.putText(frame, label+" "+ str(conf), (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
             # Handle objects not detected in the current frame
             for obj_id in list(tracking_timestamps.keys()):
                 if obj_id not in detected_ids:
                     disappearance_counts[obj_id] += 1
                     if disappearance_counts[obj_id] > debounce_limit:
+                        if (tracking_timestamps[obj_id]['lastSeenTime'] - tracking_timestamps[obj_id]['startTime'])>=1: 
                         # Finalize tracking data when object disappears
-                        tracking_data_json.append({
-                            "name": tracking_timestamps[obj_id]["class"],
-                            "trackId": tracking_timestamps[obj_id]["trackId"],
-                            "startTime": f"{tracking_timestamps[obj_id]['startTime']:.2f}s",
-                            "endTime": f"{tracking_timestamps[obj_id]['lastSeenTime']:.2f}s",
-                            "duration": f"{(tracking_timestamps[obj_id]['lastSeenTime'] - tracking_timestamps[obj_id]['startTime']):.2f}s",
-                            "totalFramesDetected": tracking_timestamps[obj_id]["detectedFrames"]
-                        })
+                            tracking_data_json.append({
+                                "name": tracking_timestamps[obj_id]["class"],
+                                "trackId": tracking_timestamps[obj_id]["trackId"],
+                                "startTime": f"{tracking_timestamps[obj_id]['startTime']:.2f}s",
+                                "endTime": f"{tracking_timestamps[obj_id]['lastSeenTime']:.2f}s",
+                                "duration": f"{(tracking_timestamps[obj_id]['lastSeenTime'] - tracking_timestamps[obj_id]['startTime']):.2f}s",
+                                "totalFramesDetected": tracking_timestamps[obj_id]["detectedFrames"]
+                            })
                         del tracking_timestamps[obj_id]
                         del disappearance_counts[obj_id]
 
